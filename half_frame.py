@@ -144,7 +144,8 @@ def split_frame(image_path, sep_finder, output_dir):
 
 def main():
     parser = argparse.ArgumentParser(description='Half Frame Photo Splitter')
-    parser.add_argument('image_path', help='Half frame image to cut')
+    parser.add_argument(
+        'images_path', help='Half frame image to cut', nargs='+')
     parser.add_argument('--debug', action='store_true', default=False)
     parser.add_argument(
         '--black-threshold',
@@ -174,7 +175,8 @@ def main():
         black_threshold=args.black_threshold,
         detect_attempts=args.attempts
     )
-    split_frame(args.image_path, sep_finder, args.output_dir)
+    for image_path in args.images_path:
+        split_frame(image_path, sep_finder, args.output_dir)
 
 
 if __name__ == '__main__':
