@@ -34,17 +34,31 @@ def clean_separator_values(values):
     Given a list of autodetected separation values, return the two
     values that are probably correct.
 
-    Assumes values have a normal distribution, remove outliers and
-    return mean.
+    TODO: Allow to define detection strategies and use this method.
+
+    Remove outliers that can make the stripe wider causing loss of information.
+    Assumes values have a normal distribution, remove outliers and return mean.
     """
-    def remove_outliers(numbers):
+    def remove_outliers(numbers, sign=1):
         mean = stats.mean(numbers)
         stdev = stats.stdev(numbers)
 
-        return [n for n in numbers if n >= mean - stdev and n <= mean + stdev]
+        return [n for n in numbers if sign * n <= sign * (mean + sign * stdev)]
 
-    cleaned_values = list(map(remove_outliers, zip(*values)))
+    left, right = zip(*values)
+    cleaned_values = [remove_outliers(left, sign=-1), remove_outliers(right)]
     return tuple(map(stats.mean, cleaned_values))
+
+
+def clean_separator_values_minmax(values):
+    """
+    Filter left greater to avg(rigth), the other way round and finally return
+    max(left), min(right)
+    """
+    left, right = zip(*values)
+    lmean, rmean = stats.mean(left), stats.mean(right)
+
+    return max(filter(lambda x: x < rmean, left)), min(filter(lambda x: x > lmean, right))
 
 
 class StripDetector:
@@ -52,11 +66,11 @@ class StripDetector:
         self,
         black_threshold=50,
         pixel_increment=1,
-        detect_attempts=100
+        detect_samples=100
     ):
         self.threshold = black_threshold
         self.increment = pixel_increment
-        self.attempts = detect_attempts
+        self.samples = detect_samples
 
     def get_separator(self, image, left, right, x):
         """
@@ -89,7 +103,7 @@ class StripDetector:
 
         return left, right
 
-    def detect(self, image, attempts=None):
+    def detect(self, image, samples=None):
         """
         Detects separation between images subframes buy searching for a black strip
         in the middle of the image vertically.
@@ -98,17 +112,17 @@ class StripDetector:
         """
         left_offset = image.width * 4 / 10
         right_offset = image.width * 6 / 10
-        attempts = attempts or self.attempts
+        samples = samples or self.samples
 
         values = [
             self.get_separator(
                 image, left_offset, right_offset,
                 int(random.uniform(0, image.height))
             )
-            for _ in range(attempts)
+            for _ in range(samples)
         ]
 
-        separator = clean_separator_values(values)
+        separator = clean_separator_values_minmax(values)
         logger.debug('Detected separator %s', separator)
 
         return separator
@@ -120,6 +134,7 @@ def split_frame(image_path, sep_finder, output_dir):
     a two half frames images, split them into two
     different files.
     """
+    logger.debug('Loading %s', image_path)
     image = Image.open(image_path)
 
     width, height = image.size
@@ -154,10 +169,10 @@ def main():
         help='Tweak black strip detection threshold.'
     )
     parser.add_argument(
-        '--attempts',
+        '--samples',
         type=int,
         default=100,
-        help='Strip detection attempts. Increase for dark images'
+        help='Strip detection samples. Increase for dark images'
     )
     parser.add_argument(
         '-d', '--output-dir',
@@ -173,7 +188,7 @@ def main():
 
     sep_finder = StripDetector(
         black_threshold=args.black_threshold,
-        detect_attempts=args.attempts
+        detect_samples=args.samples
     )
     for image_path in args.images_path:
         split_frame(image_path, sep_finder, args.output_dir)
