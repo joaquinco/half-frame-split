@@ -58,7 +58,10 @@ def clean_separator_values_minmax(values):
     left, right = zip(*values)
     lmean, rmean = stats.mean(left), stats.mean(right)
 
-    return max(filter(lambda x: x < rmean, left)), min(filter(lambda x: x > lmean, right))
+    return (
+        max(filter(lambda x: x < rmean, left)),
+        min(filter(lambda x: x > lmean, right))
+    )
 
 
 class StripDetector:
@@ -105,8 +108,8 @@ class StripDetector:
 
     def detect(self, image, samples=None):
         """
-        Detects separation between images subframes buy searching for a black strip
-        in the middle of the image vertically.
+        Detects separation between images subframes buy searching for a black
+        strip in the middle of the image vertically.
 
         Return a tuple (left, right) with the start and ending of the strip
         """
