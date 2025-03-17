@@ -8,8 +8,8 @@ import random
 import math
 import statistics as stats
 
-# pip install Pillow
 from PIL import Image
+# pip install Pillow from PIL import Image
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler(sys.stdout))
@@ -69,11 +69,16 @@ class StripDetector:
         self,
         black_threshold=50,
         pixel_increment=1,
-        detect_samples=100
+        detect_samples=100,
+        pad=0,
+        half_strip=False
     ):
         self.threshold = black_threshold
         self.increment = pixel_increment
         self.samples = detect_samples
+        self.pad = pad
+        # Keep half of the strip for each size or not
+        self.half_strip = half_strip
 
     def get_separator(self, image, left, right, x):
         """
@@ -104,7 +109,13 @@ class StripDetector:
 
             right -= self.increment
 
-        return left, right
+        if self.half_strip:
+            strip_length = right - left
+            pad = strip_length / 2
+        else:
+            pad = self.pad
+
+        return left + pad, right - pad
 
     def detect(self, image, samples=None):
         """
@@ -181,6 +192,17 @@ def main():
         '-d', '--output-dir',
         help='Output directory',
     )
+    parser.add_argument(
+        '--pad',
+        help='Strip pixels to keep',
+        type=int,
+        default=0,
+    )
+    parser.add_argument(
+        '--keep-half-strip',
+        help='Keep half strip',
+        action='store_true'
+    )
 
     args = parser.parse_args()
 
@@ -191,7 +213,9 @@ def main():
 
     sep_finder = StripDetector(
         black_threshold=args.black_threshold,
-        detect_samples=args.samples
+        detect_samples=args.samples,
+        pad=args.pad,
+        half_strip=args.keep_half_strip,
     )
     for image_path in args.images_path:
         split_frame(image_path, sep_finder, args.output_dir)
