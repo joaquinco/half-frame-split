@@ -1,4 +1,9 @@
-#!/bin/python3
+# /// script
+# dependencies = [
+#  "Pillow",
+# ]
+# requires-python = ">=3.8"
+# ///
 
 import argparse
 import logging
@@ -9,7 +14,6 @@ import math
 import statistics as stats
 
 from PIL import Image
-# pip install Pillow from PIL import Image
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler(sys.stdout))
